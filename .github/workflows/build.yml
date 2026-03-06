@@ -3,15 +3,13 @@ name: Build EtherX Mobile
 on:
   push:
     branches: [main, develop]
-    tags:
-      - "v*"
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
   build-android:
-    name: Build Android APK
+    name: 🤖 Android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,19 +37,11 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: etherx-android-apk
+          name: android-builds
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: android/app/build/outputs/apk/release/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-ios:
-    name: Build iOS IPA
+    name: 🍎 iOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,12 +50,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
 
       - name: Install dependencies
         run: npm install
@@ -98,13 +82,38 @@ jobs:
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: etherx-ios-ipa
+          name: ios-builds
           path: ios/build/EtherXMobile.ipa
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+  publish:
+    name: 🚀 Publish GitHub Release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List downloaded files
+        run: find artifacts -type f | sort
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=mobile-latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v2
         with:
-          files: ios/build/EtherXMobile.ipa
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: EtherX Mobile ${{ steps.version.outputs.tag }}
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
