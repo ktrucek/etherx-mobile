@@ -2,6 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     CFPropertyList (3.0.7)
+      base64
+      nkf
       rexml
     activesupport (7.1.5.1)
       base64
@@ -79,6 +81,7 @@ GEM
     mutex_m (0.3.0)
     nap (1.1.0)
     netrc (0.11.0)
+    nkf (0.2.0)
     public_suffix (6.0.1)
     rexml (3.4.0)
     ruby-macho (2.5.1)
