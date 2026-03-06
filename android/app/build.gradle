@@ -3,7 +3,7 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 react {
-    // React Native configuration
+    autolinkLibrariesWithApp()
 }
 
 def enableProguardInReleaseBuilds = false
