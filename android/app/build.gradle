@@ -3,7 +3,7 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 react {
-
+    // React Native configuration
 }
 
 def enableProguardInReleaseBuilds = false
@@ -42,9 +42,10 @@ android {
 }
 
 dependencies {
+    // React Native core
     implementation("com.facebook.react:react-android")
-    implementation("com.facebook.react:hermes-android")
 
+    // Hermes JS engine (enabled via gradle.properties hermesEnabled=true)
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
