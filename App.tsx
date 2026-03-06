@@ -1,3 +1,5 @@
+/// <reference path="/tmp/etherx-mobile/loose-globals.d.ts" />
+
 import React, { useRef, useState, useEffect } from 'react';
 import {
     SafeAreaView,
@@ -121,10 +123,11 @@ export default function App() {
 
     const navigateTo = (newUrl: string) => {
         let finalUrl = newUrl.trim();
+        const hasProtocol = /^https?:\/\//.test(finalUrl);
 
         // Add https:// if no protocol
-        if (!finalUrl.match(/^https?:\/\//)) {
-            if (finalUrl.includes('.')) {
+        if (!hasProtocol) {
+            if (finalUrl.indexOf('.') !== -1) {
                 finalUrl = 'https://' + finalUrl;
             } else {
                 // Search query
@@ -159,7 +162,15 @@ export default function App() {
         setTabs(newTabs);
 
         if (activeTabId === tabId) {
-            setActiveTabId(newTabs[newTabs.length - 1].id);
+            let lastOpenTab: Tab | undefined;
+
+            for (const nextTab of newTabs) {
+                lastOpenTab = nextTab;
+            }
+
+            if (lastOpenTab) {
+                setActiveTabId(lastOpenTab.id);
+            }
         }
     };
 
