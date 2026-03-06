@@ -163,7 +163,7 @@ export default function App() {
         }
     };
 
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    const activeTab = tabs.find((tab: Tab) => tab.id === activeTabId);
 
     return (
         <SafeAreaView style={styles.container}>
