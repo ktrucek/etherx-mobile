@@ -12,20 +12,26 @@ import {
     ScrollView,
     FlatList,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface Tab {
+    id: number;
+    url: string;
+    title: string;
+}
 
 const INITIAL_URL = 'https://n8n.kriptoentuzijasti.io/browser.html';
 
 export default function App() {
-    const webViewRef = useRef(null);
-    const [url, setUrl] = useState(INITIAL_URL);
-    const [currentUrl, setCurrentUrl] = useState(INITIAL_URL);
-    const [canGoBack, setCanGoBack] = useState(false);
-    const [canGoForward, setCanGoForward] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [tabs, setTabs] = useState([{ id: 1, url: INITIAL_URL, title: 'EtherX Browser' }]);
-    const [activeTabId, setActiveTabId] = useState(1);
+    const webViewRef = useRef<WebView>(null);
+    const [url, setUrl] = useState<string>(INITIAL_URL);
+    const [currentUrl, setCurrentUrl] = useState<string>(INITIAL_URL);
+    const [canGoBack, setCanGoBack] = useState<boolean>(false);
+    const [canGoForward, setCanGoForward] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [tabs, setTabs] = useState<Tab[]>([{ id: 1, url: INITIAL_URL, title: 'EtherX Browser' }]);
+    const [activeTabId, setActiveTabId] = useState<number>(1);
 
     // Inject JavaScript bridge for localStorage and Web3
     const injectedJavaScript = `
@@ -84,7 +90,7 @@ export default function App() {
     true;
   `;
 
-    const handleMessage = async (event) => {
+    const handleMessage = async (event: WebViewMessageEvent) => {
         try {
             const data = JSON.parse(event.nativeEvent.data);
 
@@ -113,7 +119,7 @@ export default function App() {
         }
     };
 
-    const navigateTo = (newUrl) => {
+    const navigateTo = (newUrl: string) => {
         let finalUrl = newUrl.trim();
 
         // Add https:// if no protocol
@@ -130,7 +136,7 @@ export default function App() {
         setCurrentUrl(finalUrl);
 
         // Update active tab
-        setTabs(prevTabs => prevTabs.map(tab =>
+        setTabs((prevTabs: Tab[]) => prevTabs.map((tab: Tab) =>
             tab.id === activeTabId ? { ...tab, url: finalUrl } : tab
         ));
     };
@@ -146,10 +152,10 @@ export default function App() {
         setUrl(INITIAL_URL);
     };
 
-    const closeTab = (tabId) => {
+    const closeTab = (tabId: number) => {
         if (tabs.length === 1) return; // Don't close last tab
 
-        const newTabs = tabs.filter(tab => tab.id !== tabId);
+        const newTabs = tabs.filter((tab: Tab) => tab.id !== tabId);
         setTabs(newTabs);
 
         if (activeTabId === tabId) {
@@ -166,7 +172,7 @@ export default function App() {
             {/* Tabs Bar */}
             <View style={styles.tabsBar}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {tabs.map(tab => (
+                    {tabs.map((tab: Tab) => (
                         <TouchableOpacity
                             key={tab.id}
                             style={[
@@ -246,14 +252,14 @@ export default function App() {
                 source={{ uri: activeTab?.url || INITIAL_URL }}
                 injectedJavaScript={injectedJavaScript}
                 onMessage={handleMessage}
-                onNavigationStateChange={(navState) => {
+                onNavigationStateChange={(navState: WebViewNavigation) => {
                     setCanGoBack(navState.canGoBack);
                     setCanGoForward(navState.canGoForward);
                     setCurrentUrl(navState.url);
                     setLoading(navState.loading);
 
                     // Update tab title
-                    setTabs(prevTabs => prevTabs.map(tab =>
+                    setTabs((prevTabs: Tab[]) => prevTabs.map((tab: Tab) =>
                         tab.id === activeTabId
                             ? { ...tab, title: navState.title || 'Loading...', url: navState.url }
                             : tab
