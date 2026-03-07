@@ -131,7 +131,11 @@ jobs:
     name: 🚀 Publish GitHub Release
     needs: [build-android, build-ios]
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.build-android.result == 'success' || needs.build-ios.result == 'success') &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: 📥 Download all artifacts
         uses: actions/download-artifact@v4
