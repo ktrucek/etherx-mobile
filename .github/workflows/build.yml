@@ -86,6 +86,9 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
+      - name: 🔧 Install xcpretty
+        run: gem install xcpretty --no-document
+
       - name: 🌫 Install Pods
         run: |
           cd ios
