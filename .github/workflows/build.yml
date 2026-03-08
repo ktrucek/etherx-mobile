@@ -2,7 +2,7 @@ name: Build EtherX Mobile
 
 on:
   push:
-    branches: [main, develop, master]
+    branches: [main, develop, master, standalone]
     tags: ["v*"]
   pull_request:
     branches: [main, master]
