@@ -1,0 +1,4 @@
+# Gitea Actions Runner data
+runner-data/
+.env
+*.log
