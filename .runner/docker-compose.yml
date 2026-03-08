@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  gitea-runner:
+    image: gitea/act_runner:latest
+    container_name: etherx-gitea-runner
+    restart: unless-stopped
+    environment:
+      - GITEA_INSTANCE_URL=https://git.kasp.top
+      - GITEA_RUNNER_REGISTRATION_TOKEN=${GITEA_REGISTRATION_TOKEN}
+      - GITEA_RUNNER_NAME=etherx-mobile-runner
+      - GITEA_RUNNER_LABELS=ubuntu-latest,ubuntu-22.04,linux
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runner-data:/data
+    privileged: true
+    networks:
+      - gitea-runner-network
+
+networks:
+  gitea-runner-network:
+    driver: bridge

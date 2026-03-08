@@ -1,0 +1,61 @@
+name: Build EtherX Mobile (Gitea)
+
+on:
+  push:
+    branches: [main, develop, master]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-android:
+    name: 🤖 Android APK
+    runs-on: ubuntu-latest
+    container:
+      image: reactnativecommunity/react-native-android:latest
+      options: --user root
+    steps:
+      - name: 📥 Checkout code
+        uses: https://github.com/actions/checkout@v4
+
+      - name: 📦 Install Node dependencies
+        run: npm ci
+
+      - name: 🔑 Generate debug keystore
+        run: |
+          mkdir -p android/app
+          cd android/app
+          keytool -genkeypair \
+            -v \
+            -storetype PKCS12 \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=EtherX Debug,O=kriptoentuzijasti,C=HR"
+
+      - name: 🔧 Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: 🤖 Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace --warning-mode=all
+
+      - name: 📤 Upload APK artifact
+        uses: https://github.com/actions/upload-artifact@v3
+        with:
+          name: etherx-mobile-android
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # iOS build zakomentiran - kasp.top nema macOS runner
+  # Za iOS build koristi lokalni Mac ili dodaj self-hosted macOS runner
+  # build-ios:
+  #   name: 🍎 iOS IPA (iPhone + iPad)
+  #   runs-on: macos-latest
+  #   ...

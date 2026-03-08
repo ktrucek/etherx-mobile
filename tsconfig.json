@@ -1,0 +1,9 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "types": ["react", "react-native", "jest"],
+    "jsx": "react-native"
+  },
+  "include": ["App.tsx", "index.js", "mobile-mode.ts", "src/**/*"],
+  "exclude": ["node_modules", "android", "ios"]
+}

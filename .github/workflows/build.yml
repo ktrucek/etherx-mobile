@@ -1,0 +1,189 @@
+name: Build EtherX Mobile
+
+on:
+  push:
+    branches: [main, develop, master]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: 🤖 Android (APK)
+    runs-on: ubuntu-latest
+    # For kasp.top Git (Gitea): use self-hosted runner if available
+    # runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: 📦 Install Node dependencies
+        run: npm ci
+
+      - name: 🔑 Generate debug keystore
+        run: |
+          cd android/app
+          keytool -genkeypair \
+            -v \
+            -storetype PKCS12 \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=EtherX Debug,O=kriptoentuzijasti,C=HR"
+
+      - name: 🔧 Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: 🤖 Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-builds
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+  build-ios:
+    name: 🍎 iOS (IPA)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: 📦 Install Node dependencies
+        run: npm ci
+
+      - name: 💎 Setup Ruby 3.2 (pinned)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios
+
+      - name: 🔧 Install xcpretty
+        run: gem install xcpretty --no-document
+
+      - name: 🌫 Install Pods
+        run: |
+          cd ios
+          bundle exec pod install
+        env:
+          NO_FLIPPER: 1
+
+      - name: 🏗️ Build iOS Archive
+        run: |
+          cd ios
+          xcodebuild archive \
+            -workspace EtherXMobile.xcworkspace \
+            -scheme EtherXMobile \
+            -configuration Release \
+            -archivePath $PWD/build/EtherXMobile.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            | xcpretty || true
+
+      - name: 📦 Create IPA from archive
+        run: |
+          mkdir -p ios/build/ipa
+          cp -r ios/build/EtherXMobile.xcarchive/Products/Applications/EtherXMobile.app \
+                ios/build/ipa/
+          cd ios/build/ipa
+          mkdir Payload
+          mv EtherXMobile.app Payload/
+          zip -r EtherXMobile.ipa Payload/
+          mv EtherXMobile.ipa ../
+
+      - name: 📤 Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-builds
+          path: ios/build/EtherXMobile.ipa
+          if-no-files-found: warn
+
+  publish:
+    name: 🚀 Publish GitHub Release
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.build-android.result == 'success' || needs.build-ios.result == 'success') &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/'))
+    steps:
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: 📋 List artifacts
+        run: find artifacts -type f | sort
+
+      - name: 🏷️ Get version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=mobile-latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🚀 Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "EtherX Mobile ${{ steps.version.outputs.tag }}"
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+          make_latest: true
+          body: |
+            ## 📱 EtherX Mobile ${{ steps.version.outputs.tag }}
+
+            ### 📥 Downloads
+
+            | Platform | File |
+            |----------|------|
+            | 🤖 **Android** | `app-release.apk` |
+            | 🍎 **iOS** | `EtherXMobile.ipa` (sideload) |
+
+            ### ⚙️ Install
+
+            **Android:** Enable "Unknown sources" → Install APK
+
+            **iOS:** Use AltStore or Apple Configurator 2 to sideload IPA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
