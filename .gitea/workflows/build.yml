@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-android:
-    name: 🤖 Android (APK)
+    name: 🤖 Android APK
     runs-on: ubuntu-latest
     container:
       image: reactnativecommunity/react-native-android:latest
@@ -53,31 +53,69 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  build-info:
-    name: 📋 Build Info
-    runs-on: ubuntu-latest
-    needs: [build-android]
-    if: always()
-    container:
-      image: alpine:latest
+  build-ios:
+    name: 🍎 iOS IPA (iPhone + iPad)
+    runs-on: macos-latest
     steps:
-      - name: 📥 Download Android APK
-        if: needs.build-android.result == 'success'
-        uses: https://github.com/actions/download-artifact@v4
-        with:
-          name: android-apk
-          path: artifacts/
+      - name: 📥 Checkout code
+        uses: https://github.com/actions/checkout@v4
 
-      - name: 📊 Show build summary
+      - name: ⚙️ Setup Node.js 18
+        uses: https://github.com/actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: 📦 Install Node dependencies
+        run: npm ci
+
+      - name: 💎 Setup Ruby
+        uses: https://github.com/ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios
+
+      - name: 🌫 Install CocoaPods
         run: |
-          echo "## 📱 EtherX Mobile Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f artifacts/app-release.apk ]; then
-            SIZE=$(du -h artifacts/app-release.apk | cut -f1)
-            echo "✅ **Android APK**: Built successfully ($SIZE)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Android APK**: Build failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔖 **Version**: ${GITHUB_REF_NAME}" >> $GITHUB_STEP_SUMMARY
-          echo "📦 **Commit**: ${GITHUB_SHA:0:8}" >> $GITHUB_STEP_SUMMARY
+          cd ios
+          bundle exec pod install
+        env:
+          NO_FLIPPER: 1
+
+      - name: 🏗️ Build iOS Archive (Universal - iPhone + iPad)
+        run: |
+          cd ios
+          xcodebuild archive \
+            -workspace EtherXMobile.xcworkspace \
+            -scheme EtherXMobile \
+            -configuration Release \
+            -archivePath "$PWD/build/EtherXMobile.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            TARGETED_DEVICE_FAMILY="1,2" \
+            | xcpretty || true
+
+      - name: 📦 Create IPA from archive
+        run: |
+          mkdir -p ios/build/ipa
+          cp -r ios/build/EtherXMobile.xcarchive/Products/Applications/EtherXMobile.app \
+                ios/build/ipa/
+          cd ios/build/ipa
+          mkdir Payload
+          mv EtherXMobile.app Payload/
+          zip -r EtherXMobile-universal.ipa Payload/
+          mv EtherXMobile-universal.ipa ../
+
+      - name: 📤 Upload iOS IPA artifact
+        uses: https://github.com/actions/upload-artifact@v3
+        with:
+          name: etherx-mobile-ios-universal
+          path: ios/build/EtherXMobile-universal.ipa
+          if-no-files-found: warn
+          retention-days: 30
