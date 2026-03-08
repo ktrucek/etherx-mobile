@@ -53,69 +53,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  build-ios:
-    name: 🍎 iOS IPA (iPhone + iPad)
-    runs-on: macos-latest
-    steps:
-      - name: 📥 Checkout code
-        uses: https://github.com/actions/checkout@v4
-
-      - name: ⚙️ Setup Node.js 18
-        uses: https://github.com/actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-
-      - name: 📦 Install Node dependencies
-        run: npm ci
-
-      - name: 💎 Setup Ruby
-        uses: https://github.com/ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-          working-directory: ios
-
-      - name: 🌫 Install CocoaPods
-        run: |
-          cd ios
-          bundle exec pod install
-        env:
-          NO_FLIPPER: 1
-
-      - name: 🏗️ Build iOS Archive (Universal - iPhone + iPad)
-        run: |
-          cd ios
-          xcodebuild archive \
-            -workspace EtherXMobile.xcworkspace \
-            -scheme EtherXMobile \
-            -configuration Release \
-            -archivePath "$PWD/build/EtherXMobile.xcarchive" \
-            -destination 'generic/platform=iOS' \
-            -sdk iphoneos \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            SKIP_INSTALL=NO \
-            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
-            TARGETED_DEVICE_FAMILY="1,2" \
-            | xcpretty || true
-
-      - name: 📦 Create IPA from archive
-        run: |
-          mkdir -p ios/build/ipa
-          cp -r ios/build/EtherXMobile.xcarchive/Products/Applications/EtherXMobile.app \
-                ios/build/ipa/
-          cd ios/build/ipa
-          mkdir Payload
-          mv EtherXMobile.app Payload/
-          zip -r EtherXMobile-universal.ipa Payload/
-          mv EtherXMobile-universal.ipa ../
-
-      - name: 📤 Upload iOS IPA artifact
-        uses: https://github.com/actions/upload-artifact@v3
-        with:
-          name: etherx-mobile-ios-universal
-          path: ios/build/EtherXMobile-universal.ipa
-          if-no-files-found: warn
-          retention-days: 30
+  # iOS build zakomentiran - kasp.top nema macOS runner
+  # Za iOS build koristi lokalni Mac ili dodaj self-hosted macOS runner
+  # build-ios:
+  #   name: 🍎 iOS IPA (iPhone + iPad)
+  #   runs-on: macos-latest
+  #   ...
