@@ -119,8 +119,8 @@ fi
 info "Repo root detektiran: $MOBILE_DIR"
 
 CURRENT_BRANCH="$(git -C "$MOBILE_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-REMOTE_HEAD_REF="$(git -C "$MOBILE_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-REMOTE_DEFAULT_BRANCH="${REMOTE_HEAD_REF#origin/}"
+REMOTE_HEAD_REF="$(git -C "$MOBILE_DIR" symbolic-ref --short refs/remotes/github/HEAD 2>/dev/null || true)"
+REMOTE_DEFAULT_BRANCH="${REMOTE_HEAD_REF#github/}"
 
 if [[ -n "$CURRENT_BRANCH" && "$CURRENT_BRANCH" != "HEAD" ]]; then
   PUSH_BRANCH="$CURRENT_BRANCH"
@@ -143,12 +143,12 @@ else
   info "etherx-mobile repo pronađen: $MOBILE_DIR"
   cd "$MOBILE_DIR"
   info "Dohvaćam zadnje izmjene s GitHuba..."
-  git fetch origin
+  git fetch github
   # Sinkroniziraj samo ako nema lokalnih izmjena koje bi se izgubile
   DIRTY=$(git status --porcelain 2>/dev/null | grep -v "^??" || true)
   if [[ -z "$DIRTY" ]]; then
-    git pull origin main --ff-only 2>/dev/null || \
-    git pull origin master --ff-only 2>/dev/null || \
+    git pull github main --ff-only 2>/dev/null || \
+    git pull github master --ff-only 2>/dev/null || \
     warn "Pull nije uspio (možda nema remote main/master grane)"
     success "Repo sinkroniziran s GitHuba"
   else
@@ -461,8 +461,8 @@ if [[ "$SKIP_GIT" == true ]]; then
   warn "Demo mode: preskačem GitHub push"
 elif [[ "$NO_PUSH" == false ]]; then
   info "Pushanje na GitHub (triggerira Actions CI build)..."
-  git push origin "$PUSH_BRANCH" || error "Push nije uspio — provjeri branch '$PUSH_BRANCH' i pristup GitHubu"
-  git push origin "$TAG_NAME" || warn "Tag push nije uspio"
+  git push github "$PUSH_BRANCH" || error "Push nije uspio — provjeri branch '$PUSH_BRANCH' i pristup GitHubu"
+  git push github "$TAG_NAME" || warn "Tag push nije uspio"
   success "GitHub push gotov — CI build triggeriran za $TAG_NAME"
 else
   warn "--no-push: Preskačem GitHub push"

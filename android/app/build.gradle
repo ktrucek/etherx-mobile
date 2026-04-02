@@ -25,8 +25,8 @@ android {
         applicationId "io.kriptoentuzijasti.etherx"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "1.0.8"
+        versionCode 13
+        versionName "1.0.12"
     }
     signingConfigs {
         debug {
